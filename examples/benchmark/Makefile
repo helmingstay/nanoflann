@@ -2,6 +2,10 @@
 CC         = g++
 CFLAGS     = -Wall -O2 -std=c++11
 
+ifeq ($(DEBUG), 1)
+    CFLAGS += -Wall -ggdb
+endif
+
 IFLAGS = -I../../include 
 
 BIN = ./run_test

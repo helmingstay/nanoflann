@@ -67,7 +67,7 @@ ptree_t build_tree(pcloud_t & pcloud) {
 	// radiusSearch():  Perform a search for the N closest points
 	// ----------------------------------------------------------------
 void search_tree(cloudtree dat,
-    const Point query_pt,
+    const point_t query_pt,
     const num_t search_radius,
     size_t nsearch
 ) {
@@ -76,10 +76,13 @@ void search_tree(cloudtree dat,
     nanoflann::SearchParams params;
     //params.sorted = false;
     size_t nMatch;
+    // scale radius to dist 
+    // rather than vise versa
+    num_t radius_pow = std::pow(search_radius, the_dim);
     for (size_t ii=0; ii<nsearch; ii++) {
         // run the search
         nMatch = dat.ptree->radiusSearch(
-            query_pt.data(), search_radius, matches, params);
+            query_pt.data(), radius_pow, matches, params);
 
         if (!quiet) {
             cout 
@@ -126,8 +129,8 @@ int main(int argc, char *argv[])
 	// Generate points:
 	dat.pcloud = generateRandomPointCloud(npoint, rng, cloud_min, cloud_max);
 
-    // 
-    const Point query_pt{ 0.0, 0.0, 0.0};
+    // zero-initialized
+    const point_t query_pt{};
     // initialize pointcloud, tree. 
     // return as struct
     dat.ptree = build_tree(dat.pcloud);

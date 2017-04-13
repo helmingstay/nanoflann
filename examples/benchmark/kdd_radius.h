@@ -5,28 +5,30 @@
 #include <chrono>
 #include <nanoflann.hpp>
 
+// user-specified 
+// change to see timings
+constexpr size_t the_dim = 2;
+using num_t = float;
+// pointcloud uniform distribution bounds
+constexpr num_t cloud_min = -1;
+constexpr num_t cloud_max = 1;
+// don't print 
+constexpr bool quiet = false;
+
+// convenience
 using std::array;
 using std::cout;
 using std::endl;
 using namespace nanoflann;
 
-// change to see timings
-constexpr size_t the_dim = 3;
-using num_t = float;
-constexpr num_t cloud_min = -10;
-constexpr num_t cloud_max = 10;
-// don't print 
-constexpr bool quiet = false;
-
-
-// basic types
-using Point = array<num_t, the_dim>;
+// basic types, convenience
+using point_t = array<num_t, the_dim>;
 using results_t = std::vector<std::pair<size_t,num_t> >;
 using rng_t = std::mt19937;
 
 // This is an example of a custom data set class
 struct PointCloud {
-	std::vector<Point> pts;
+	std::vector<point_t> pts;
 
 	// Must return the number of data points
 	inline size_t kdtree_get_point_count() const { return pts.size(); }
@@ -41,7 +43,6 @@ struct PointCloud {
         }
 		return dist;
 	}
-
 
 	inline num_t kdtree_get_pt(const size_t idx, size_t _dim) const {
         if (_dim >= the_dim) {
