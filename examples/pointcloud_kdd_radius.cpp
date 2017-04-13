@@ -31,8 +31,11 @@
 #include <ctime>
 #include <cstdlib>
 #include <iostream>
+#include <array>
 
-using namespace std;
+//using namespace std;
+using std::cout;
+using std::endl;
 using namespace nanoflann;
 
 // This is an example of a custom data set class
@@ -79,7 +82,7 @@ struct PointCloud
 template <typename T>
 void generateRandomPointCloud(PointCloud<T> &point, const size_t N, const T max_range = 10)
 {
-	std::cout << "Generating "<< N << " point cloud...";
+	cout << "Generating "<< N << " point cloud...";
 	point.pts.resize(N);
 	for (size_t i=0;i<N;i++)
 	{
@@ -88,25 +91,33 @@ void generateRandomPointCloud(PointCloud<T> &point, const size_t N, const T max_
 		point.pts[i].z = max_range * (rand() % 1000) / T(1000);
 	}
 
-	std::cout << "done\n";
+	cout << "done\n";
 }
 
-template <typename num_t>
-void kdtree_demo(const size_t N)
-{
+// construct a kd-tree index:
+template <typename num_t, size_t dim>
+using my_kd_tree_t = KDTreeSingleIndexAdaptor<
+    L2_Simple_Adaptor<num_t, PointCloud<num_t> >,
+    PointCloud<num_t>,
+    dim /* dim */
+>;
+
+template <typename num_t, size_t dim=3>
+void kdtree_demo(
+    const size_t N, 
+    const std::array<num_t, dim> query_pt,
+    const num_t search_radius,
+    size_t nsearch
+) {
 	PointCloud<num_t> cloud;
 
 	// Generate points:
 	generateRandomPointCloud(cloud, N);
 
-	// construct a kd-tree index:
-	typedef KDTreeSingleIndexAdaptor<
-		L2_Simple_Adaptor<num_t, PointCloud<num_t> > ,
-		PointCloud<num_t>,
-		3 /* dim */
-		> my_kd_tree_t;
-
-	my_kd_tree_t   index(3 /*dim*/, cloud, KDTreeSingleIndexAdaptorParams(10 /* max leaf */) );
+	my_kd_tree_t<num_t, dim> index(
+        dim-1 /*dim*/, cloud,
+        KDTreeSingleIndexAdaptorParams(10 /* max leaf */) 
+    );
 	index.buildIndex();
 
 #if 0
@@ -115,11 +126,11 @@ void kdtree_demo(const size_t N)
 	index.buildIndex();
 #endif
 
-	const num_t query_pt[3] = { 0.5, 0.5, 0.5};
 
 	// ----------------------------------------------------------------
 	// knnSearch():  Perform a search for the N closest points
 	// ----------------------------------------------------------------
+	/*
 	{
 		size_t num_results = 5;
 		std::vector<size_t>   ret_index(num_results);
@@ -136,33 +147,59 @@ void kdtree_demo(const size_t N)
 			cout << "idx["<< i << "]=" << ret_index[i] << " dist["<< i << "]=" << out_dist_sqr[i] << endl;
 		cout << "\n";
 	}
+    */
 
 	// ----------------------------------------------------------------
 	// radiusSearch():  Perform a search for the N closest points
 	// ----------------------------------------------------------------
-	{
-		const num_t search_radius = static_cast<num_t>(0.1);
-		std::vector<std::pair<size_t,num_t> >   ret_matches;
+    //const num_t search_radius = static_cast<num_t>(0.1);
+    std::vector<std::pair<size_t,num_t> >   ret_matches;
 
-		nanoflann::SearchParams params;
-		//params.sorted = false;
+    nanoflann::SearchParams params;
+    //params.sorted = false;
+	for (size_t ii = 0; ii < nsearch; ii++) {
 
 		const size_t nMatches = index.radiusSearch(&query_pt[0],search_radius, ret_matches, params);
 
 		cout << "radiusSearch(): radius=" << search_radius << " -> " << nMatches << " matches\n";
+        /* 
 		for (size_t i=0;i<nMatches;i++)
 			cout << "idx["<< i << "]=" << ret_matches[i].first << " dist["<< i << "]=" << ret_matches[i].second << endl;
 		cout << "\n";
+        */
 	}
 
 }
 
- int main()
-{
-	// Randomize Seed
-	srand(time(NULL));
-	kdtree_demo<float>(4);
-	kdtree_demo<double>(100000);
-	return 0;
+void print_usage(const char * name) noexcept {
+    cout << "Usage: " << name << " npoint dist nsearch" << endl;
 }
 
+int main(int argc, char *argv[])
+{
+    using tpoint = float;
+    // commandline args
+    long npoint{0}, nsearch{0};
+    tpoint dist;
+    // check & convert
+    if (argc != 4) {
+        print_usage(argv[0]);
+        return 1;
+    }
+    try {
+        npoint = std::stol(argv[1]);
+        dist = std::stod(argv[2]);
+        nsearch = std::stol(argv[3]);
+    } catch (...) {
+        print_usage(argv[0]);
+        cout << "Error parsing commandline args" << endl;
+        return 1;
+    }
+        
+	// Randomize Seed
+	srand(time(NULL));
+    const size_t the_dim = 3;
+	const std::array<tpoint, the_dim> query_pt = { 0.0, 0.0, 0.0};
+	kdtree_demo<tpoint>(npoint, query_pt, dist, nsearch);
+	return 0;
+}
